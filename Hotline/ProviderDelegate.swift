@@ -26,4 +26,58 @@
 /// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 /// THE SOFTWARE.
 
-import Foundation
+import AVFoundation
+import CallKit
+
+class ProviderDelegate: NSObject {
+    private let callManager: CallManager
+    private let provider: CXProvider
+    
+    init(callManager: CallManager) {
+        self.callManager = callManager
+        provider = CXProvider(configuration: ProviderDelegate.providerConfiguration)
+        super.init()
+        provider.setDelegate(self, queue: nil)
+    }
+    
+    static var providerConfiguration: CXProviderConfiguration = {
+        let providerConfig = CXProviderConfiguration(localizedName: "Hotline")
+        
+        providerConfig.supportsVideo = true
+        providerConfig.maximumCallsPerCallGroup = 1
+        providerConfig.supportedHandleTypes = [.phoneNumber]
+        
+        return providerConfig
+    }()
+    
+    func reportIncomingCall(uuid: UUID,
+                            handle: String,
+                            hasVideo: Bool = false,
+                            completion: ((Error?) -> Void)?) {
+        
+        let update = CXCallUpdate()
+        update.remoteHandle = CXHandle(type: .phoneNumber, value: handle)
+        update.hasVideo = hasVideo
+        
+        provider.reportNewIncomingCall(with: uuid, update: update) { (error) in
+            if error == nil {
+                let call = Call(uuid: uuid, handle: handle)
+                self.callManager.add(call: call)
+            }
+            completion?(error)
+        }
+    }
+}
+
+extension ProviderDelegate: CXProviderDelegate {
+    //cleans up any ongoing calls
+    func providerDidReset(_ provider: CXProvider) {
+        stopAudio()
+        
+        for call in callManager.calls {
+            call.end()
+        }
+        
+        callManager.removeAllCalls()
+    }
+}
