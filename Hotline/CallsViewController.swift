@@ -51,15 +51,20 @@ class CallsViewController: UITableViewController {
       let handle = newCallController.handle else { return }
     
     let videoEnabled = newCallController.videoEnabled
+    let incoming = newCallController.incoming
     
-    let backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
-    
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-      AppDelegate.shared.displayIncomingCall(uuid: UUID(),
-                                             handle: handle,
-                                             hasVideo: videoEnabled) { (error) in
-                                              UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+    if incoming {
+      let backgroundTaskIdentifier = UIApplication.shared.beginBackgroundTask(expirationHandler: nil)
+      
+      DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+        AppDelegate.shared.displayIncomingCall(uuid: UUID(),
+                                               handle: handle,
+                                               hasVideo: videoEnabled) { (error) in
+                                                UIApplication.shared.endBackgroundTask(backgroundTaskIdentifier)
+        }
       }
+    } else {
+      callManager.startCall(handle: handle, videoEnabled: videoEnabled)
     }
   }
 }

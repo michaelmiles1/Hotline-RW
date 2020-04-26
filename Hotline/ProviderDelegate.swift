@@ -107,4 +107,34 @@ extension ProviderDelegate: CXProviderDelegate {
         action.fulfill()
         callManager.remove(call: call)
     }
+    
+    func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
+        let call = Call(uuid: action.callUUID, outgoing: true, handle: action.handle.value)
+        
+        configureAudioSession()
+        call.connectedStateChanged = { [weak self, weak call] in
+            guard let self = self,
+                let call = call else {
+                    return
+            }
+            
+            if call.connectedState == .pending {
+                self.provider.reportOutgoingCall(with: call.uuid, startedConnectingAt: nil)
+            } else if call.connectedState == .complete {
+                self.provider.reportOutgoingCall(with: call.uuid, connectedAt: nil)
+            }
+        }
+        call.start { [weak self, weak call] (success) in
+            guard let self = self,
+                let call = call else {
+                    return
+            }
+            if success {
+                action.fulfill()
+                self.callManager.add(call: call)
+            } else {
+                action.fail()
+            }
+        }
+    }
 }

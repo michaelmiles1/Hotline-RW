@@ -78,4 +78,13 @@ class CallManager {
       }
     }
   }
+  
+  func startCall(handle: String, videoEnabled: Bool) {
+    let handle = CXHandle(type: .phoneNumber, value: handle)
+    let startCallAction = CXStartCallAction(call: UUID(), handle: handle)
+    startCallAction.isVideo = videoEnabled
+    let transaction = CXTransaction(action: startCallAction)
+    
+    requestTransaction(transaction: transaction)
+  }
 }
